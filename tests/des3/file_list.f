@@ -1,0 +1,11 @@
+hdl/crp.v
+hdl/des3.v
+hdl/key_sel3.v
+hdl/sbox1.v
+hdl/sbox2.v
+hdl/sbox3.v
+hdl/sbox4.v
+hdl/sbox5.v
+hdl/sbox6.v
+hdl/sbox7.v
+hdl/sbox8.v
