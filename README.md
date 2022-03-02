@@ -31,3 +31,5 @@ If you have any problems please check https://pygraphviz.github.io/documentation
    Verbose
 Makefiles in tests designs are ready to be launched
 
+To open the files you can use xDOT:
+	$ sudo apt install xdot
