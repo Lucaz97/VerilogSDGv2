@@ -119,10 +119,6 @@ class RHSVisitor(NodeVisitor):
         self.expanded_statements.append(new_assign)
         self.new_decls.append((self.extracted_ID, left, right))
 
-
-    def visit_Plus(self, node):
-        self.visit_BinOp(node)
-
     def visit_Power(self, node):
         self.visit_BinOp(node)
 

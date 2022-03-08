@@ -97,6 +97,5 @@ def main():
         sdg.draw_modules()
     
     sdg.draw("sdg")
-
 if __name__ == '__main__':
     main()

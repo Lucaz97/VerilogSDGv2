@@ -1,4 +1,4 @@
-
+from pyverilog.vparser.ast import *
 class DependenceNode:
     def __init__(self):
         self.parents = []
@@ -228,3 +228,27 @@ class FunctionNode(DependenceNode):
     
     def __str__(self):
         return "FUNCTION: " + self.name
+
+
+node_type_list = [
+    InputNode, OutputNode, ConstNode, CondNode, AlwaysNode, CouplingNode, ModuleNode, ParameterNode,
+    AssignNode, Power, Times, Divide, Mod, Plus, Minus,
+    Sll, Srl, Sla, Sra, LessThan, GreaterThan, LessEq,
+    GreaterEq, Eq, NotEq, Eql, NotEql, And, Or, Xor, 
+    Xnor, Or, Land, Lor, Uplus, Uminus, Ulnot, Unot,
+    Uand, Unand, Uor, Unor, Uxor, Uxnor]
+op_list = [Power, Times, Divide, Mod, Plus, Minus,
+    Sll, Srl, Sla, Sra, LessThan, GreaterThan, LessEq,
+    GreaterEq, Eq, NotEq, Eql, NotEql, And, Or, Xor, 
+    Xnor, Or, Land, Lor, Uplus, Uminus, Ulnot, Unot,
+    Uand, Unand, Uor, Unor, Uxor, Uxnor]
+def encode_node(node):
+    if isinstance(node, AssignNode):
+        candidate_op = node.name.split("_")[0]
+        if candidate_op in globals() and globals()[candidate_op] in op_list:
+            print("ENTERED")
+            node = globals()[candidate_op]
+            one_pos = node_type_list.index(node)
+            return "0 "*one_pos + "1 " + "0 "*(len(node_type_list)-one_pos-1)
+    one_pos = node_type_list.index(node.__class__)
+    return "0 "*one_pos + "1 " + "0 "*(len(node_type_list)-one_pos-1)

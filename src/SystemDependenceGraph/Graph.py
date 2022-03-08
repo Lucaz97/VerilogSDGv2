@@ -13,8 +13,11 @@ class Graph:
         nlist = [str(n)+" mem: "+str(id(n)) for n in self.nodes]
 
         G.add_nodes_from(nlist)
+        feature_file = open(path+"_features.txt", 'w')
 
         for n in self.nodes:
+            print(n)
+            print(encode_node(n), file=feature_file)
             if isinstance(n, CondNode):
                 for c in n.true_statements:
                     G.add_edge(str(n)+" mem: "+str(id(n)), str(c)+" mem: "+str(id(c)), color="blue")
