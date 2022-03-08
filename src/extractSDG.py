@@ -3,6 +3,10 @@ from optparse import OptionParser
 import pyverilog.vparser.ast as vast
 from pyverilog.vparser.parser import VerilogCodeParser
 from SystemDependenceGraph.SystemDependencyGraph import *
+from Preprocessing.signalvisitor import BinaryOpsVisitor
+from Preprocessing.signalvisitor import MissignBeginEndVisitor 
+from Preprocessing.modulevisitor import ModuleVisitor as mvisit
+from pyverilog.ast_code_generator.codegen import ASTCodeGenerator
 
 class Config:
     def parse_verilog_options(self, file_list):
@@ -73,6 +77,20 @@ def main():
     if cfg.verbose:
         ast.show()
     
+
+    mv = mvisit()
+    mv.visit(ast)
+    modulenames = mv.get_modulenames()
+    for module in modulenames:
+        mod_node = mv.get_moduleinfotable().getDefinition(module)
+        bov = BinaryOpsVisitor(mod_node)
+        bov.visit(mod_node)
+    outfile = open("out.v", 'w')
+    codegen = ASTCodeGenerator()
+    ast.show()
+   
+    print(codegen.visit(ast), file=outfile)
+
     sdg = SystemDependencyGraph(ast, cfg.top)
 
     if options.all:

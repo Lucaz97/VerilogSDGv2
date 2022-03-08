@@ -59,13 +59,13 @@ class ProgramDependencyGraph(Graph):
                 self.build_nodes(statement.get_trueStmts())
                 # connect condition to statements 
                 for s in statement.get_trueStmts():
-                    cnode.add_child(self.builder[s])
+                    cnode.add_child(self.builder[s],True)
                     self.builder[s].add_parent(cnode)
                 # create false statements nodes 
                 self.build_nodes(statement.get_falseStmts())
                 # connect
                 for s in statement.get_falseStmts():
-                    cnode.add_child(self.builder[s])
+                    cnode.add_child(self.builder[s], False)
                     self.builder[s].add_parent(cnode)
             elif isinstance(statement, CaseStatementStruct):
                 # create condition node
@@ -103,17 +103,17 @@ class ProgramDependencyGraph(Graph):
             # OK MAYBE IS BECAUSE I LOSE STUFF, I NEED TO CHECK BELOW HOW I DID FOR BLOCKING CASES
             # I think this is necessary but i need to fix above and to add case below
             elif isinstance(statement, IfStruct):
-                self.build_edges(statement.get_trueStmts())
-                self.build_edges(statement.get_falseStmts())
+                self.build_edges(statement.get_trueStmts()+statements[i+1:])
+                self.build_edges(statement.get_falseStmts()+statements[i+1:])
             elif isinstance(statement, CaseStatementStruct):
                 for case in statement.get_cases():
-                    self.build_edges(case.get_statements())
+                    self.build_edges(case.get_statements()+statements[i+1:])
 
             # for blocking assignments i only check the following statements
             # check direct dependencies:
-            if isinstance(statement, BlockingAssignStruct):
+            elif isinstance(statement, BlockingAssignStruct):
                 for lhs in statement.lhs_signals:
-                    parent_nodes = [self.builder[statement]]
+                    parent_nodes = [self.builder[statement]] # parent nodes is a list because when branching we may get more than one parent
                     for s in statements[i+1:]:
                         if isinstance(s, BlockingAssignStruct): 
                             if lhs in s.lhs_signals:

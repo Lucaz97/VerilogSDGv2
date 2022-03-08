@@ -10,22 +10,28 @@ class DependenceNode:
         self.ast = None
 
     def add_parent(self, parent):
-        self.parents.append(parent)
+        if parent not in self.parents:
+            self.parents.append(parent)
 
     def add_child(self, child):
-        self.children.append(child)
+        if child not in self.children:
+            self.children.append(child)
     
     def add_inter_parent(self, parent):
-        self.inter_parents.append(parent)
+        if parent not in self.inter_parents:
+            self.inter_parents.append(parent)
 
     def add_inter_child(self, child):
-        self.inter_children.append(child)
+        if child not in self.inter_children:
+            self.inter_children.append(child)
 
     def add_fictitious_parent(self, parent):
-        self.fictitious_parents.append(parent)
+        if parent not in self.fictitious_parents:
+            self.fictitious_parents.append(parent)
 
     def add_fictitious_child(self, child):
-        self.fictitious_children.append(child)
+        if child not in self.fictitious_children:
+            self.fictitious_children.append(child)
 
     def set_ast(self, ast):
         self.ast = ast
@@ -91,14 +97,27 @@ class CondNode(DependenceNode):
     def __init__(self, cond_statement):
         super().__init__()
         self.cond_statement = cond_statement
+        self.false_statements = []
+        self.true_statements = []
 
     def clone(self):
         clone = CondNode(self.cond_statement)
         clone.ast = self.ast
         return clone
 
+    def add_child(self, s, true_false):
+        super().add_child( s)
+        if true_false:
+            self.true_statements.append(s)
+        else:
+            self.false_statements.append(s)
+
+    def addFalseStatement(self, fs):
+        self.false_statements.append(fs)
+
     def __str__(self):
         return  "COND: " + ", ".join(self.cond_statement.get_cond_dependencies())
+
 
 class AssignNode(DependenceNode):
     def __init__(self, name):

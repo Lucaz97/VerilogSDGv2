@@ -1,3 +1,4 @@
+from click import style
 import pygraphviz as pgv
 from SystemDependenceGraph.DependenceNode import *
 
@@ -14,10 +15,17 @@ class Graph:
         G.add_nodes_from(nlist)
 
         for n in self.nodes:
-            for c in n.get_children():
-                G.add_edge(str(n)+" mem: "+str(id(n)), str(c)+" mem: "+str(id(c)))
-            for c in n.get_inter_children():
-                G.add_edge(str(n)+" mem: "+str(id(n)), str(c)+" mem: "+str(id(c)), style="dashed")
+            if isinstance(n, CondNode):
+                for c in n.true_statements:
+                    G.add_edge(str(n)+" mem: "+str(id(n)), str(c)+" mem: "+str(id(c)), color="blue")
+                for c in n.false_statements:
+                    G.add_edge(str(n)+" mem: "+str(id(n)), str(c)+" mem: "+str(id(c)), color="red")
+
+            else:
+                for c in n.get_children():
+                    G.add_edge(str(n)+" mem: "+str(id(n)), str(c)+" mem: "+str(id(c)))
+            #for c in n.get_inter_children():
+            #    G.add_edge(str(n)+" mem: "+str(id(n)), str(c)+" mem: "+str(id(c)), style="dashed")
             for c in n.get_fictitious_children():
                 G.add_edge(str(n)+" mem: "+str(id(n)), str(c)+" mem: "+str(id(c)), style="dotted")
 

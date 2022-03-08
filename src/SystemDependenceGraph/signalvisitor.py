@@ -209,6 +209,33 @@ class IfStruct:
                     f_statements.append(a)
         return f_statements
 
+    def get_true_flattened(self):
+        f_statements = []
+        for s in self.trueStatements:
+            if isinstance(s,AssignStruct):
+                f_statements.append(s)
+            elif isinstance(s, IfStruct):
+                for a in s.get_flattened_statements():
+                    f_statements.append(a)
+            elif isinstance(s, CaseStatementStruct):
+                for a in s.get_flattened_statements():
+                    f_statements.append(a)
+        return f_statements
+
+    def get_false_flattened(self):
+        f_statements = []
+        for s in self.falseStatements:
+            if isinstance(s,AssignStruct):
+                f_statements.append(s)
+            elif isinstance(s, IfStruct):
+                for a in s.get_flattened_statements():
+                    f_statements.append(a)
+            elif isinstance(s, CaseStatementStruct):
+                for a in s.get_flattened_statements():
+                    f_statements.append(a)
+        return f_statements
+
+
     def __str__(self):
         rep = "IF " + (str(self.cond) if self.cond is not None else "") + " TRUE: " + " ".join([str(a) for a in self.trueStatements]) + " FALSE: " + " ".join([str(a) for a in self.falseStatements])
         return rep
@@ -450,6 +477,7 @@ class IdentifierVisitor(NodeVisitor):
 
     def visit_Partselect(self, node):
         self.ids.append(node.var.name)
+
 
 
 class FunctionStruct:

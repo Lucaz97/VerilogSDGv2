@@ -329,8 +329,14 @@ class ModuleSystemDependencyGraph(Graph):
         node_map = {node: node.clone() for node in self.nodes}
 
         for node in self.nodes:
-            for child in node.get_children():
-                node_map[node].add_child(node_map[child])
+            if isinstance(node, CondNode):
+                for child in node.true_statements:
+                    node_map[node].add_child(node_map[child], True)
+                for child in node.false_statements:
+                    node_map[node].add_child(node_map[child], False)
+            else:
+                for child in node.get_children():
+                    node_map[node].add_child(node_map[child])
             for parent in node.get_parents():
                 node_map[node].add_parent(node_map[parent])
             for child in node.get_inter_children():
