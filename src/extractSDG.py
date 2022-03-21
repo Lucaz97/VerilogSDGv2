@@ -1,12 +1,9 @@
 import os  
 from optparse import OptionParser
 
-from click import option
-import pyverilog.vparser.ast as vast
 from pyverilog.vparser.parser import VerilogCodeParser
 from SystemDependenceGraph.SystemDependencyGraph import *
 from Preprocessing.signalvisitor import BinaryOpsVisitor
-from Preprocessing.signalvisitor import MissignBeginEndVisitor 
 from Preprocessing.modulevisitor import ModuleVisitor as mvisit
 from pyverilog.ast_code_generator.codegen import ASTCodeGenerator
 import os
