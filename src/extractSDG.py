@@ -7,6 +7,7 @@ from Preprocessing.signalvisitor import BinaryOpsVisitor
 from Preprocessing.signalvisitor import MissignBeginEndVisitor 
 from Preprocessing.modulevisitor import ModuleVisitor as mvisit
 from pyverilog.ast_code_generator.codegen import ASTCodeGenerator
+import os
 
 class Config:
     def parse_verilog_options(self, file_list):
@@ -50,7 +51,7 @@ def main():
     optparser = OptionParser()
 
     optparser.add_option("-o","--target-dir",dest="target",action="store",
-                         default="work",help="Include path")
+                         default="work/",help="Include path")
     optparser.add_option("-t","--top",dest="top",action="store",
                          help="Top module name")
     optparser.add_option("-f", "--file-list", dest="file_list", action="store",
@@ -62,7 +63,9 @@ def main():
     optparser.add_option("-a", "--all", dest="all", action="store_true",
                          default=False, help="Output SDG of all modules instad of top module only")
     optparser.add_option("-v", "--verbose", action="store_true", dest="verbose",
-                         default=False, help="Verbose execution")  
+                         default=False, help="Verbose execution") 
+    optparser.add_option("-i", "--index", action="store", dest="index",
+                         default=0, help="Verbose execution", type="int")  
 
     (options, args) = optparser.parse_args()
     if not options.top:
@@ -76,7 +79,8 @@ def main():
     ast = codeparser.parse()
     if cfg.verbose:
         ast.show()
-    
+    if not os.path.exists(options.target):
+        os.makedirs(options.target)
 
     mv = mvisit()
     mv.visit(ast)
@@ -96,7 +100,7 @@ def main():
     if options.all:
         sdg.draw_modules()
     
-    sdg.draw("sdg")
-    sdg.print_graph("sdg")
+    #sdg.draw("sdg")
+    sdg.print_graph(options.target+"sdg", options.index)
 if __name__ == '__main__':
     main()
