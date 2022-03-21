@@ -36,6 +36,10 @@ class BlockVisitor(NodeVisitor):
                 #print(nd)
                 if isinstance(nd[1], IntConst):
                     w = self.dwv.signaltable[nd[1]]
+                elif isinstance(nd[1], Pointer):
+                    w = Width(IntConst(0),IntConst(0))
+                elif isinstance(nd[1], Partselect):
+                    w = Width(nd[1].msb, nd[1].lsb)
                 else:
                     w = self.dwv.signaltable[nd[1].name]
                 new_decl = Decl([Wire(nd[0].name, width=w)])
@@ -327,6 +331,10 @@ class BinaryOpsVisitor(NodeVisitor):
                 #print(nd)
                 if isinstance(nd[1], IntConst):
                     w = self.dwv.signaltable[nd[1]]
+                elif isinstance(nd[1], Pointer):
+                    w = Width(IntConst(0),IntConst(0))
+                elif isinstance(nd[1], Partselect):
+                    w = Width(nd[1].msb, nd[1].lsb)
                 else:
                     w = self.dwv.signaltable[nd[1].name]
                 new_decl = Decl([Wire(nd[0].name, width=w)])
