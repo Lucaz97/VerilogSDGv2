@@ -1,5 +1,7 @@
 import os  
 from optparse import OptionParser
+
+from click import option
 import pyverilog.vparser.ast as vast
 from pyverilog.vparser.parser import VerilogCodeParser
 from SystemDependenceGraph.SystemDependencyGraph import *
@@ -65,7 +67,9 @@ def main():
     optparser.add_option("-v", "--verbose", action="store_true", dest="verbose",
                          default=False, help="Verbose execution") 
     optparser.add_option("-i", "--index", action="store", dest="index",
-                         default=0, help="Verbose execution", type="int")  
+                         default=0, help="starting index for counting nodes", type="int")  
+    optparser.add_option("-F", "--formality", action="store_true", dest="formality",
+                         default=False, help="run formality to check equivalence between original design and processed design")  
 
     (options, args) = optparser.parse_args()
     if not options.top:
@@ -77,10 +81,15 @@ def main():
 
     codeparser = VerilogCodeParser(cfg.filelist, preprocess_include=cfg.includes, preprocess_define=cfg.defines, debug=False)
     ast = codeparser.parse()
+
     if cfg.verbose:
         ast.show()
     if not os.path.exists(options.target):
         os.makedirs(options.target)
+
+    outfile = open(options.target+"original_design.v", 'w')
+    codegen = ASTCodeGenerator()
+    print(codegen.visit(ast), file=outfile)
 
     mv = mvisit()
     mv.visit(ast)
@@ -89,7 +98,7 @@ def main():
         mod_node = mv.get_moduleinfotable().getDefinition(module)
         bov = BinaryOpsVisitor(mod_node)
         bov.visit(mod_node)
-    outfile = open("out.v", 'w')
+    outfile = open(options.target+"processed_design.v", 'w')
     codegen = ASTCodeGenerator()
     ast.show()
    
@@ -102,5 +111,23 @@ def main():
     
     #sdg.draw("sdg")
     sdg.print_graph(options.target+"sdg", options.index)
+
+    if options.fomality:
+        gen_formality(options.target, options.top)
+
 if __name__ == '__main__':
     main()
+
+def gen_formality(path, top):
+    base_path = path + "formality/"
+    if not os.path.exists(base_path):
+        os.makedirs(base_path)
+    
+    f = open(base_path+"eq_check.tcl")
+    print("read_verilog -container r -libname WORK -05 { original_design.v }",file=f)
+    print("set_top r:/WORK/"+top,file=f)
+    print("read_verilog -container r -libname WORK -05 { processed_design.v }",file=f)
+    print("set_top i:/WORK/"+top,file=f)
+    print("match",file=f)
+    print("verify",file=f)
+
