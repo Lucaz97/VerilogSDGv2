@@ -19,13 +19,30 @@ from SystemDependenceGraph.visit import *
 
 
 class BlockVisitor(NodeVisitor):
-    def __init__(self, node):
+    def __init__(self, node, module, dwv):
         self.node = node
         self.new_decls = []
+        self.module = module
+        self.dwv = dwv
 
     def visit_Block(self, node):
-        bv = BlockVisitor(node)
+        bv = BlockVisitor(node, self.module, self.dwv)
         bv.generic_visit(node)
+        if bv.new_decls:
+            for nd in bv.new_decls:
+                # nd is (new_id, left, right)
+                # for now go easy and just copy left one and see how it goes
+                #print(self.dwv.signaltable)
+                #print(nd)
+                if isinstance(nd[1], IntConst):
+                    w = self.dwv.signaltable[nd[1]]
+                else:
+                    w = self.dwv.signaltable[nd[1].name]
+                new_decl = Decl([Wire(nd[0].name, width=w)])
+                temp_list = list(self.module.items)
+                temp_list.append(new_decl)
+                self.module.items = tuple(temp_list)
+                self.dwv.addEntry(nd[0].name, w)
 
     def visit_BlockingSubstitution(self, node):
         rhsv = RHSVisitor(True)
@@ -298,16 +315,16 @@ class BinaryOpsVisitor(NodeVisitor):
         quit()
 
     def visit_Block(self, node):
-        bv = BlockVisitor(node)
+        bv = BlockVisitor(node, self.module, self.dwv)
         # check if new decls to add:
         bv.generic_visit(node)
-        print(bv.new_decls)
+        #print(bv.new_decls)
         if bv.new_decls:
             for nd in bv.new_decls:
                 # nd is (new_id, left, right)
                 # for now go easy and just copy left one and see how it goes
-                print(self.dwv.signaltable)
-                print(nd)
+                #print(self.dwv.signaltable)
+                #print(nd)
                 if isinstance(nd[1], IntConst):
                     w = self.dwv.signaltable[nd[1]]
                 else:

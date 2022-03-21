@@ -97,5 +97,6 @@ def main():
         sdg.draw_modules()
     
     sdg.draw("sdg")
+    sdg.print_graph("sdg")
 if __name__ == '__main__':
     main()
