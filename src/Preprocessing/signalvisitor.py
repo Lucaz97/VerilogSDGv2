@@ -42,9 +42,9 @@ class BlockVisitor(NodeVisitor):
                     w = Width(nd[1].msb, nd[1].lsb)
                 else:
                     w = self.dwv.signaltable[nd[1].name]
-                new_decl = Decl([Wire(nd[0].name, width=w)])
+                new_decl = Decl([Reg(nd[0].name, width=w)])
                 temp_list = list(self.module.items)
-                temp_list.append(new_decl)
+                temp_list.insert(0, new_decl)
                 self.module.items = tuple(temp_list)
                 self.dwv.addEntry(nd[0].name, w)
 
@@ -310,6 +310,7 @@ class BinaryOpsVisitor(NodeVisitor):
         # preprocess begin ends and assigns
         mbev = MissignBeginEndVisitor(module)
         mbev.visit(module)
+        mbev.fix_decls()
         # build datawidth table
         self.dwv = DatawidthVisitor()
         self.dwv.visit(module)
@@ -337,9 +338,9 @@ class BinaryOpsVisitor(NodeVisitor):
                     w = Width(nd[1].msb, nd[1].lsb)
                 else:
                     w = self.dwv.signaltable[nd[1].name]
-                new_decl = Decl([Wire(nd[0].name, width=w)])
+                new_decl = Decl([Reg(nd[0].name, width=w)])
                 temp_list = list(self.module.items)
-                temp_list.append(new_decl)
+                temp_list.insert(0,new_decl)
                 self.module.items = tuple(temp_list)
                 self.dwv.addEntry(nd[0].name, w)
 
@@ -375,6 +376,11 @@ class MissignBeginEndVisitor(NodeVisitor):
     
     def __init__(self, module):
         self.module = module
+        self.to_fix = []
+        self.decls = []
+
+    def visit_Decl(self, node): 
+        self.decls.append(node)
 
     def visit_Always(self, node):
         if not isinstance(node.statement, Block):
@@ -403,5 +409,30 @@ class MissignBeginEndVisitor(NodeVisitor):
         temp_list = list(self.module.items)
         temp_list.remove(node)
         temp_list.append(new_always)
+        self.to_fix.append(node.left)
         self.module.items = tuple(temp_list)
     
+    class IdentifierVisitor(NodeVisitor):
+        def __init__(self): 
+            self.ids = []
+        
+        def visit_Identifier(self, node): 
+            self.ids.append(node.name)
+
+    def fix_decls(self):
+        for lhs in self.to_fix:
+            iv = IdentifierVisitor()
+            iv.visit(lhs)
+            for l in self.decls:
+                temp_list = list(l.list)
+                for d in l.list:
+                    if isinstance(d, Wire) and d.name in iv.ids:
+                        # gotta change decl from Wire to Reg
+                        new_reg = Reg(d.name, width=d.width, dimensions=d.dimensions, signed=d.signed, lineno=d.lineno)
+                        temp_list.remove(d)
+                        temp_list.append(new_reg)
+                l.list = temp_list
+            for p in self.module.portlist.ports:
+                if p.second and isinstance(p.second, Wire) and p.second.name in iv.ids:
+                    new_reg = Reg(p.second.name, width=p.second.width, dimensions=p.second.dimensions, signed=p.second.signed, lineno=p.second.lineno)
+                    p.second = new_reg

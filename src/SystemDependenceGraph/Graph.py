@@ -1,5 +1,3 @@
-from click import style
-import pygraphviz as pgv
 from SystemDependenceGraph.DependenceNode import *
 from os.path import exists
 
@@ -9,40 +7,37 @@ class Graph:
         self.nodes = []
         self.builder = {}
 
-    def draw(self, path):
-        G = pgv.AGraph(directed=True, strict=False)
-        nlist = [str(n)+" mem: "+str(id(n)) for n in self.nodes]
+    #def draw(self, path):
+    #    G = pgv.AGraph(directed=True, strict=False)
+    #    nlist = [str(n)+" mem: "+str(id(n)) for n in self.nodes]
 
-        G.add_nodes_from(nlist)
-        feature_file = open(path+"_features.txt", 'w')
+    #    G.add_nodes_from(nlist)
+    #    feature_file = open(path+"_features.txt", 'w')
 
-        for n in self.nodes:
-            print(n)
-            print(encode_node(n), file=feature_file)
-            if isinstance(n, CondNode):
-                for c in n.true_statements:
-                    G.add_edge(str(n)+" mem: "+str(id(n)), str(c)+" mem: "+str(id(c)), color="blue")
-                for c in n.false_statements:
-                    G.add_edge(str(n)+" mem: "+str(id(n)), str(c)+" mem: "+str(id(c)), color="red")
+    #     for n in self.nodes:
+    #         print(n)
+    #         print(encode_node(n), file=feature_file)
+    #         if isinstance(n, CondNode):
+    #             for c in n.true_statements:
+    #                 G.add_edge(str(n)+" mem: "+str(id(n)), str(c)+" mem: "+str(id(c)), color="blue")
+    #             for c in n.false_statements:
+    #                 G.add_edge(str(n)+" mem: "+str(id(n)), str(c)+" mem: "+str(id(c)), color="red")
 
-            else:
-                for c in n.get_children():
-                    G.add_edge(str(n)+" mem: "+str(id(n)), str(c)+" mem: "+str(id(c)))
-            #for c in n.get_inter_children():
-            #    G.add_edge(str(n)+" mem: "+str(id(n)), str(c)+" mem: "+str(id(c)), style="dashed")
-            for c in n.get_fictitious_children():
-                G.add_edge(str(n)+" mem: "+str(id(n)), str(c)+" mem: "+str(id(c)), style="dotted")
+    #         else:
+    #             for c in n.get_children():
+    #                 G.add_edge(str(n)+" mem: "+str(id(n)), str(c)+" mem: "+str(id(c)))
+    #         #for c in n.get_inter_children():
+    #         #    G.add_edge(str(n)+" mem: "+str(id(n)), str(c)+" mem: "+str(id(c)), style="dashed")
+    #         for c in n.get_fictitious_children():
+    #             G.add_edge(str(n)+" mem: "+str(id(n)), str(c)+" mem: "+str(id(c)), style="dotted")
 
-        G.draw(path=path, prog="neato")
+    #     G.draw(path=path, prog="neato") 
 
     def get_nodes(self):
         return self.nodes
 
     def print_graph(self, path, index=0):
-        G = pgv.AGraph(directed=True, strict=False)
-        nlist = [str(n)+" mem: "+str(id(n)) for n in self.nodes]
 
-        G.add_nodes_from(nlist)
         if exists(path+"_features.txt"):
             feature_file = open(path+"_features.txt", 'a')
             cell_file = open(path+"_cells.txt", 'a')

@@ -45,6 +45,20 @@ class Config:
             if not os.path.exists(f): raise IOError("file not found: " + f)
 
 
+def gen_formality(path, top):
+    base_path = path + "formality/"
+    if not os.path.exists(base_path):
+        os.makedirs(base_path)
+    
+    f = open(base_path+"eq_check.tcl", "w")
+    print("read_verilog -container r -libname WORK -05 { ../original_design.v }",file=f)
+    print("set_top r:/WORK/"+top,file=f)
+    print("read_verilog -container i -libname WORK -05 { ../processed_design.v }",file=f)
+    print("set_top i:/WORK/"+top,file=f)
+    print("match",file=f)
+    print("verify",file=f)
+
+
 def main():
     
     optparser = OptionParser()
@@ -103,28 +117,14 @@ def main():
 
     sdg = SystemDependencyGraph(ast, cfg.top)
 
-    if options.all:
-        sdg.draw_modules()
+    
     
     #sdg.draw("sdg")
     sdg.print_graph(options.target+"sdg", options.index)
 
-    if options.fomality:
+    if options.formality:
         gen_formality(options.target, options.top)
 
 if __name__ == '__main__':
     main()
-
-def gen_formality(path, top):
-    base_path = path + "formality/"
-    if not os.path.exists(base_path):
-        os.makedirs(base_path)
-    
-    f = open(base_path+"eq_check.tcl")
-    print("read_verilog -container r -libname WORK -05 { original_design.v }",file=f)
-    print("set_top r:/WORK/"+top,file=f)
-    print("read_verilog -container r -libname WORK -05 { processed_design.v }",file=f)
-    print("set_top i:/WORK/"+top,file=f)
-    print("match",file=f)
-    print("verify",file=f)
 
