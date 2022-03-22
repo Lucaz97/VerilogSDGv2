@@ -107,6 +107,7 @@ class CondNode(DependenceNode):
 
     def add_child(self, s, true_false):
         super().add_child( s)
+        if true_false is None: return
         if true_false:
             self.true_statements.append(s)
         else:
@@ -246,7 +247,6 @@ def encode_node(node):
     if isinstance(node, AssignNode):
         candidate_op = node.name.split("_")[0]
         if candidate_op in globals() and globals()[candidate_op] in op_list:
-            print("ENTERED")
             node = globals()[candidate_op]
             one_pos = node_type_list.index(node)
             return "0 "*one_pos + "1 " + "0 "*(len(node_type_list)-one_pos-1)

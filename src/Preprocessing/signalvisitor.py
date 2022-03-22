@@ -17,6 +17,26 @@ import pyverilog.utils.util as util
 import pyverilog.utils.verror as verror
 from SystemDependenceGraph.visit import *
 
+def get_width(lut, lhs):
+    # lut is width, dimensions
+    if isinstance(lhs, Lvalue):
+        lhs = lhs.var
+    if isinstance(lhs, LConcat):
+        w = 0
+        for c in lhs.list:
+            w += get_width(lut, c)
+    elif isinstance(lhs, Pointer):
+        if lut[lhs.var.name][1]:
+            w = int(lut[lhs.var.name][0].msb.value) - int(lut[lhs.var.name][0].lsb.value) + 1
+        else:    
+            w = 1
+    elif isinstance(lhs, Partselect):
+        w = int(lhs.msb.value) - int(lhs.lsb.value) + 1
+    elif lut[lhs.name][0]:
+        w = int(lut[lhs.name][0].msb.value) - int(lut[lhs.name][0].lsb.value) + 1
+    else:
+        w = 1
+    return w
 
 class BlockVisitor(NodeVisitor):
     def __init__(self, node, module, dwv):
@@ -30,23 +50,13 @@ class BlockVisitor(NodeVisitor):
         bv.generic_visit(node)
         if bv.new_decls:
             for nd in bv.new_decls:
-                # nd is (new_id, left, right)
-                # for now go easy and just copy left one and see how it goes
-                #print(self.dwv.signaltable)
-                #print(nd)
-                if isinstance(nd[1], IntConst):
-                    w = self.dwv.signaltable[nd[1]]
-                elif isinstance(nd[1], Pointer):
-                    w = Width(IntConst(0),IntConst(0))
-                elif isinstance(nd[1], Partselect):
-                    w = Width(nd[1].msb, nd[1].lsb)
-                else:
-                    w = self.dwv.signaltable[nd[1].name]
-                new_decl = Decl([Reg(nd[0].name, width=w)])
-                temp_list = list(self.module.items)
-                temp_list.insert(0, new_decl)
-                self.module.items = tuple(temp_list)
-                self.dwv.addEntry(nd[0].name, w)
+                w_int = get_width( self.dwv.signaltable, nd[0])
+                w = Width(IntConst(w_int-1), IntConst(0))
+                for s in nd[1]:
+                    new_decl = Decl([Reg(s.name, width=w)])
+                    temp_list = list(self.module.items)
+                    temp_list.insert(0, new_decl)
+                    self.module.items = tuple(temp_list)
 
     def visit_BlockingSubstitution(self, node):
         rhsv = RHSVisitor(True)
@@ -59,7 +69,7 @@ class BlockVisitor(NodeVisitor):
             for s in reversed(rhsv.expanded_statements):
                 temp_list.insert(i,s)
             self.node.statements = tuple(temp_list)
-            self.new_decls.extend(rhsv.new_decls)
+            self.new_decls.append((node.left, rhsv.new_decls))
 
     def visit_NonblockingSubstitution(self, node):
         rhsv = RHSVisitor(False)
@@ -68,11 +78,17 @@ class BlockVisitor(NodeVisitor):
         if rhsv.extracted_ID:
             i = self.node.statements.index(node)
             node.right = Rvalue(Identifier(rhsv.extracted_ID.name))
-            temp_list = list(self.node.statements)
+            # for non blocking I need a new comb block.
+            statment_list = []
             for s in reversed(rhsv.expanded_statements):
-                temp_list.insert(i,s)
-            self.node.statements = tuple(temp_list)
-            self.new_decls.extend(rhsv.new_decls)
+                statment_list.insert(i,s)
+            
+            new_always = Always(SensList([Sens(None, 'all')]), Block(statment_list))
+            
+            temp_list = list(self.module.items)
+            temp_list.append(new_always)
+            self.module.items = tuple(temp_list)
+            self.new_decls.append((node.left, rhsv.new_decls))
         
 
 
@@ -111,17 +127,19 @@ class RHSVisitor(NodeVisitor):
     def visit_BinOp(self, node): 
         #print(node)
         # look left
-        if isinstance(node.left, (Identifier, Pointer, Partselect, Value)):
+        if isinstance(node.left, (Identifier, Pointer, Partselect, Value, Concat)):
             left = node.left
         else:
             rhsv = RHSVisitor(self.blocking)
             rhsv.visit(node.left)
+            print(node)
+            print(node.left)
             left = Identifier(rhsv.extracted_ID.name)
             self.expanded_statements.extend(rhsv.expanded_statements)
             self.new_decls.extend(rhsv.new_decls)
 
         # look right
-        if isinstance(node.right, (Identifier, Pointer, Partselect, Value)):
+        if isinstance(node.right, (Identifier, Pointer, Partselect, Value, Concat)):
             right = node.right
         else:
             rhsv = RHSVisitor(self.blocking)
@@ -131,14 +149,14 @@ class RHSVisitor(NodeVisitor):
             self.new_decls.extend(rhsv.new_decls)
 
         new_op =  node.__class__(left, right)
-        self.extracted_ID = Identifier(node.__class__.__name__ + '_' + str(id(self)))
+        self.extracted_ID = Identifier(node.__class__.__name__ + '_' + str(id(node)))
         if self.blocking:
             new_assign = BlockingSubstitution(Lvalue(self.extracted_ID), Rvalue(new_op))
         else:
             new_assign = NonblockingSubstitution(Lvalue(self.extracted_ID), Rvalue(new_op))
         
         self.expanded_statements.append(new_assign)
-        self.new_decls.append((self.extracted_ID, left, right))
+        self.new_decls.append(self.extracted_ID)
 
     def visit_Power(self, node):
         self.visit_BinOp(node)
@@ -241,7 +259,7 @@ class RHSVisitor(NodeVisitor):
         else:
             new_assign = NonblockingSubstitution(Lvalue(self.extracted_ID), Rvalue(new_op))
         self.expanded_statements.append(new_assign)
-        self.new_decls.append((self.extracted_ID, right, right))
+        self.new_decls.append(self.extracted_ID)
 
     def visit_Uplus(self, node):
         self.visit_UnOp(node)
@@ -301,7 +319,7 @@ class RHSVisitor(NodeVisitor):
             false_assign = NonblockingSubstitution(Lvalue(self.extracted_ID), Rvalue(false_value))
         new_if_statement = IfStatement(node.cond, Block([true_assign]), Block([false_assign]))
         self.expanded_statements.append(new_if_statement)
-        self.new_decls.append((self.extracted_ID, true_value, false_value))
+        self.new_decls.append(self.extracted_ID)
 
 class BinaryOpsVisitor(NodeVisitor):
 
@@ -315,9 +333,9 @@ class BinaryOpsVisitor(NodeVisitor):
         self.dwv = DatawidthVisitor()
         self.dwv.visit(module)
 
-    def visit_Assign(self, node):
-        print("ERROR: continuous assigns not supported, run preprocessor!")
-        quit()
+    #def visit_Assign(self, node):
+    #    print("ERROR: continuous assigns not supported, run preprocessor!")
+    #    quit()
 
     def visit_Block(self, node):
         bv = BlockVisitor(node, self.module, self.dwv)
@@ -326,50 +344,40 @@ class BinaryOpsVisitor(NodeVisitor):
         #print(bv.new_decls)
         if bv.new_decls:
             for nd in bv.new_decls:
-                # nd is (new_id, left, right)
-                # for now go easy and just copy left one and see how it goes
-                #print(self.dwv.signaltable)
-                #print(nd)
-                if isinstance(nd[1], IntConst):
-                    w = self.dwv.signaltable[nd[1]]
-                elif isinstance(nd[1], Pointer):
-                    w = Width(IntConst(0),IntConst(0))
-                elif isinstance(nd[1], Partselect):
-                    w = Width(nd[1].msb, nd[1].lsb)
-                else:
-                    w = self.dwv.signaltable[nd[1].name]
-                new_decl = Decl([Reg(nd[0].name, width=w)])
-                temp_list = list(self.module.items)
-                temp_list.insert(0,new_decl)
-                self.module.items = tuple(temp_list)
-                self.dwv.addEntry(nd[0].name, w)
+                # nd is (lhs, list_of_new_var_names)
+                w_int = get_width( self.dwv.signaltable, nd[0])
+                w = Width(IntConst(w_int-1), IntConst(0))
+                for s in nd[1]:
+                    new_decl = Decl([Reg(s.name, width=w)])
+                    temp_list = list(self.module.items)
+                    temp_list.insert(0, new_decl)
+                    self.module.items = tuple(temp_list)
 
 class DatawidthVisitor(NodeVisitor):
     def __init__(self):
         self.signaltable={}
 
-    def addEntry(self, name, width):
+    def addEntry(self, name, width, dimensions):
         if name not in self.signaltable or self.signaltable[name] == None:
-            self.signaltable[name] = width
+            self.signaltable[name] = (width, dimensions)
 
     def visit_Input(self, node):
-        self.addEntry(node.name, node.width)
+        self.addEntry(node.name, node.width, node.dimensions)
 
     def visit_Output(self, node):
-        self.addEntry(node.name, node.width)
+        self.addEntry(node.name, node.width, node.dimensions)
 
     def visit_Reg(self, node):
-        self.addEntry(node.name, node.width)
-
+        self.addEntry(node.name, node.width, node.dimensions)
     def visit_Wire(self, node):
-        self.addEntry(node.name, node.width)
+        self.addEntry(node.name, node.width, node.dimensions)
     
     def visit_IntConst(self,node):
         if "'" in node.value:
             width = Width(IntConst(int(node.value.split("'")[0])-1), IntConst(0))
         else:
             width = Width(IntConst(31), IntConst(0))
-        self.addEntry(node, width)
+        self.addEntry(node, width, None)
 
 
 class MissignBeginEndVisitor(NodeVisitor):        
@@ -392,7 +400,7 @@ class MissignBeginEndVisitor(NodeVisitor):
         if not isinstance(node.true_statement, Block):
             new_block = Block([node.true_statement])
             node.true_statement = new_block
-        if not isinstance(node.false_statement, Block):
+        if node.false_statement and not isinstance(node.false_statement, Block):
             new_block = Block([node.false_statement])
             node.false_statement = new_block
         self.generic_visit(node)
@@ -404,35 +412,44 @@ class MissignBeginEndVisitor(NodeVisitor):
         self.generic_visit(node)
 
     def visit_Assign(self, node):
-        new_blockingSub = BlockingSubstitution(node.left,node.right)
-        new_always = Always(SensList([Sens(None, 'all')]), Block([new_blockingSub]))
-        temp_list = list(self.module.items)
-        temp_list.remove(node)
-        temp_list.append(new_always)
-        self.to_fix.append(node.left)
-        self.module.items = tuple(temp_list)
-    
-    class IdentifierVisitor(NodeVisitor):
-        def __init__(self): 
-            self.ids = []
-        
-        def visit_Identifier(self, node): 
-            self.ids.append(node.name)
+        if isinstance(node.right.var, Operator):
+            new_blockingSub = BlockingSubstitution(node.left,node.right)
+            new_always = Always(SensList([Sens(None, 'all')]), Block([new_blockingSub]))
+            temp_list = list(self.module.items)
+            temp_list.remove(node)
+            temp_list.append(new_always)
+            self.to_fix.append(node.left)
+            self.module.items = tuple(temp_list)
 
     def fix_decls(self):
+        class _IdentifierVisitor(NodeVisitor):
+            def __init__(self): 
+                self.ids = []
+            
+            def visit_Identifier(self, node): 
+                self.ids.append(node.name)
+                print("ID:",node.name)
+        print(self.to_fix)
         for lhs in self.to_fix:
-            iv = IdentifierVisitor()
+            iv = _IdentifierVisitor()
             iv.visit(lhs)
             for l in self.decls:
                 temp_list = list(l.list)
-                for d in l.list:
-                    if isinstance(d, Wire) and d.name in iv.ids:
+                for i, d in enumerate(l.list):
+                    if isinstance(d, Output) and (len(l.list) <= i+1 or isinstance(l.list[i+1], Output)) and d.name in iv.ids:
+                        # this is for when you just have output without reg or wire
+                        new_reg = Reg(d.name, width=d.width, dimensions=d.dimensions, signed=d.signed, lineno=d.lineno)
+                        temp_list.append(new_reg)
+                    elif isinstance(d, Wire) and d.name in iv.ids:
                         # gotta change decl from Wire to Reg
                         new_reg = Reg(d.name, width=d.width, dimensions=d.dimensions, signed=d.signed, lineno=d.lineno)
                         temp_list.remove(d)
                         temp_list.append(new_reg)
                 l.list = temp_list
             for p in self.module.portlist.ports:
-                if p.second and isinstance(p.second, Wire) and p.second.name in iv.ids:
+                 if isinstance(p, Ioport) and not p.second and isinstance(p.first, Output) and p.first.name in iv.ids:
+                    new_reg = Reg(p.first.name, width=p.first.width, dimensions=p.first.dimensions, signed=p.first.signed, lineno=p.first.lineno)
+                    p.second = new_reg
+                 elif isinstance(p, Ioport) and p.second and isinstance(p.second, Wire) and p.second.name in iv.ids:
                     new_reg = Reg(p.second.name, width=p.second.width, dimensions=p.second.dimensions, signed=p.second.signed, lineno=p.second.lineno)
                     p.second = new_reg

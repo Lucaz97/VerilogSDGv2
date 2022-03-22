@@ -81,7 +81,7 @@ class ProgramDependencyGraph(Graph):
                 # connect condition to statements 
                 for case in statement.get_cases():
                     for s in case.get_statements():
-                        cnode.add_child(self.builder[s])
+                        cnode.add_child(self.builder[s], None)
                         self.builder[s].add_parent(cnode)
 
 

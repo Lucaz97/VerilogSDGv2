@@ -52,7 +52,7 @@ class Graph:
             link_test_n_file = open(path+"_link_test_n.txt", 'w')
 
         for i, n in enumerate(self.nodes):
-            print(n)
+            # print(n)
             print(encode_node(n), file=feature_file)
             print(n, file=cell_file)
             if isinstance(n, CondNode) and "locking_key" in n.cond_statement.get_cond_dependencies():
