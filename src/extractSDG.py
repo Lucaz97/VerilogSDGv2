@@ -1,3 +1,4 @@
+from curses import keyname
 import os  
 from optparse import OptionParser
 
@@ -34,6 +35,7 @@ class Config:
         self.filelist = []
         self.includes = []
         self.defines = []
+        self.key_name = options.key_name
         if options.file_list:
             if not os.path.exists(options.file_list): raise IOError("Verilog command file not found: " + options.file_list)
             self.parse_verilog_options(options.file_list)
@@ -84,7 +86,8 @@ def main():
                          default=0, help="starting index for counting nodes", type="int")  
     optparser.add_option("-F", "--formality", action="store_true", dest="formality",
                          default=False, help="run formality to check equivalence between original design and processed design")  
-
+    optparser.add_option("-k", "--key_name", action="store", dest="key_name",
+                         default=False, help="run formality to check equivalence between original design and processed design")  
     (options, args) = optparser.parse_args()
     if not options.top:
         optparser.error('Top module name not given')
@@ -125,7 +128,7 @@ def main():
     
     
     #sdg.draw("sdg")
-    sdg.print_graph(options.target+"sdg", options.index)
+    sdg.print_graph(options.target+"sdg", options.index, options.key_name)
 
     if options.formality:
         gen_formality(options.target, options.top)

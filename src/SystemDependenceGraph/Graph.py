@@ -36,7 +36,7 @@ class Graph:
     def get_nodes(self):
         return self.nodes
 
-    def print_graph(self, path, index=0):
+    def print_graph(self, path, index=0, key_name="locking_key"):
 
         if exists(path+"_features.txt"):
             feature_file = open(path+"_features.txt", 'a')
@@ -55,7 +55,7 @@ class Graph:
             # print(n)
             print(encode_node(n), file=feature_file)
             print(n, file=cell_file)
-            if isinstance(n, CondNode) and "locking_key" in n.cond_statement.get_cond_dependencies():
+            if isinstance(n, CondNode) and key_name in n.cond_statement.get_cond_dependencies():
                 for c in n.true_statements:
                     print(i+index, self.nodes.index(c)+index, file=link_test_file)
                 for c in n.false_statements:
