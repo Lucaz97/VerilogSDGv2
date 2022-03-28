@@ -27,7 +27,7 @@ class Config:
             else:
                 self.filelist.append(line)
 
-    def __init__(self, options):
+    def __init__(self, options, args):
         self.target = options.target
         self.top = options.top
         self.verbose = options.verbose
@@ -37,6 +37,9 @@ class Config:
         if options.file_list:
             if not os.path.exists(options.file_list): raise IOError("Verilog command file not found: " + options.file_list)
             self.parse_verilog_options(options.file_list)
+        
+        for a in args:
+            self.filelist.append(a)
         for i in options.include:
             self.includes.append(i)
         for d in options.define:
@@ -85,10 +88,12 @@ def main():
     (options, args) = optparser.parse_args()
     if not options.top:
         optparser.error('Top module name not given')
-    if not options.file_list:
-        optparser.error('File list not given')
+    
 
-    cfg = Config(options)
+    cfg = Config(options, args)
+
+    if not cfg.filelist:
+        optparser.error('No modules were given')
 
     codeparser = VerilogCodeParser(cfg.filelist, preprocess_include=cfg.includes, preprocess_define=cfg.defines, debug=False)
     ast = codeparser.parse()
@@ -98,9 +103,9 @@ def main():
     if not os.path.exists(options.target):
         os.makedirs(options.target)
 
-    outfile = open(options.target+"original_design.v", 'w')
-    codegen = ASTCodeGenerator()
-    print(codegen.visit(ast), file=outfile)
+    #outfile = open(options.target+"original_design.v", 'w')
+    #codegen = ASTCodeGenerator()
+    #print(codegen.visit(ast), file=outfile)
 
     mv = mvisit()
     mv.visit(ast)
@@ -111,7 +116,7 @@ def main():
         bov.visit(mod_node)
     outfile = open(options.target+"processed_design.v", 'w')
     codegen = ASTCodeGenerator()
-    ast.show()
+    #ast.show()
    
     print(codegen.visit(ast), file=outfile)
 
@@ -124,6 +129,8 @@ def main():
 
     if options.formality:
         gen_formality(options.target, options.top)
+    
+    print("!DONE!")
 
 if __name__ == '__main__':
     main()

@@ -73,3 +73,5 @@ class Graph:
         link_test_file.close()
         cell_file.close()
         feature_file.close()
+
+        print("!FINAL_INDEX! :", i+index)
