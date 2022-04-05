@@ -36,20 +36,20 @@ class Graph:
     def get_nodes(self):
         return self.nodes
 
-    def print_graph(self, path, index=0, key_name="locking_key"):
+    def print_graph(self, path, index=0, key_name="locking_key", relocking = False):
 
         if exists(path+"_features.txt"):
             feature_file = open(path+"_features.txt", 'a')
             cell_file = open(path+"_cells.txt", 'a')
             link_train_file = open(path+"_link_train.txt", 'a')
-            link_test_file = open(path+"_link_test.txt", 'a')
-            link_test_n_file = open(path+"_link_test_n.txt", 'a')
+            link_test_file = open(path+("_link_test.txt" if not relocking else "_link_test_relock.txt"), 'a')
+            link_test_n_file = open(path+("_link_test_n.txt" if not relocking else "_link_test_relock_n.txt"), 'a')
         else:
             feature_file = open(path+"_features.txt", 'w')
             cell_file = open(path+"_cells.txt", 'w')
             link_train_file = open(path+"_link_train.txt", 'w')
-            link_test_file = open(path+"_link_test.txt", 'w')
-            link_test_n_file = open(path+"_link_test_n.txt", 'w')
+            link_test_file = open(path+("_link_test.txt" if not relocking else "_link_test_relock.txt"), 'w')
+            link_test_n_file = open(path+("_link_test_n.txt" if not relocking else "_link_test_relock_n.txt"), 'w')
 
         for i, n in enumerate(self.nodes):
             # print(n)
@@ -66,6 +66,8 @@ class Graph:
             #for c in n.get_inter_children():
             #    G.add_edge(str(n)+" mem: "+str(id(n)), str(c)+" mem: "+str(id(c)), style="dashed")
             for c in n.get_fictitious_children():
+                if c not in self.nodes:
+                    print("NOT PRESENT",c)
                 print(i+index, self.nodes.index(c)+index, file=link_train_file)
 
         link_train_file.close()

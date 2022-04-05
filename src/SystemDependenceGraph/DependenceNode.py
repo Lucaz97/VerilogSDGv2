@@ -154,7 +154,7 @@ class CouplingNode(DependenceNode):
         super().__init__()
         self.invar = invar
         self.outvars = outvars
-    
+       
     def get_invar(self):
         return self.invar
 

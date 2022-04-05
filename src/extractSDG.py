@@ -87,7 +87,9 @@ def main():
     optparser.add_option("-F", "--formality", action="store_true", dest="formality",
                          default=False, help="run formality to check equivalence between original design and processed design")  
     optparser.add_option("-k", "--key_name", action="store", dest="key_name",
-                         default=False, help="run formality to check equivalence between original design and processed design")  
+                         default="locking_key", help="run formality to check equivalence between original design and processed design")  
+    optparser.add_option("-r", "--relocking", action="store_true", dest="relocking",
+                         default=False, help="is relocking")  
     (options, args) = optparser.parse_args()
     if not options.top:
         optparser.error('Top module name not given')
@@ -106,9 +108,9 @@ def main():
     if not os.path.exists(options.target):
         os.makedirs(options.target)
 
-    #outfile = open(options.target+"original_design.v", 'w')
-    #codegen = ASTCodeGenerator()
-    #print(codegen.visit(ast), file=outfile)
+    outfile = open(options.target+"original_design.v", 'w')
+    codegen = ASTCodeGenerator()
+    print(codegen.visit(ast), file=outfile)
 
     mv = mvisit()
     mv.visit(ast)
@@ -119,7 +121,8 @@ def main():
         bov.visit(mod_node)
     outfile = open(options.target+"processed_design.v", 'w')
     codegen = ASTCodeGenerator()
-    #ast.show()
+    b = open("ast.txt", "w")
+    ast.show(buf=b)
    
     print(codegen.visit(ast), file=outfile)
 
@@ -128,7 +131,7 @@ def main():
     
     
     #sdg.draw("sdg")
-    sdg.print_graph(options.target+"sdg", options.index, options.key_name)
+    sdg.print_graph(options.target+"sdg", options.index, options.key_name, options.relocking)
 
     if options.formality:
         gen_formality(options.target, options.top)
