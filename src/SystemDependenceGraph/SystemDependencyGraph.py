@@ -20,7 +20,7 @@ class SystemDependencyGraph(Graph):
             mod_node = self.mv.get_moduleinfotable().getDefinition(module)
             av = ArrayVisitor(mod_node)
             print("ARRAYS MODULE", module, ":" , av.arrays)
-            sv = SignalVisitor(av.arrays)
+            sv = SignalVisitor(av.arrays, self.mv.get_moduleinfotable())
             sv.visit(mod_node)
             msdg = ModuleSystemDependencyGraph(sv, module)
             msdg.build()
@@ -161,18 +161,19 @@ class ModuleSystemDependencyGraph(Graph):
             self.nodes.append(i_node)
             self.builder[i] = i_node
             for couple in i.get_portlist():
-                c_node = CouplingNode(couple[0], couple[1])
-                self.nodes.append(c_node)
-                self.coupling_nodes.append(c_node)
-                # i cant put these in buider but i know that the only direct 
-                # parents/childreen of instance are coupling nodes
-                
-                # we do not have information here to know if ports are inputs or
-                # outputs so we just connect them as inputs arbitrarily 
-                # and then check the direction when performing flatening
+                if couple[1]:
+                    c_node = CouplingNode(couple[0], couple[1])
+                    self.nodes.append(c_node)
+                    self.coupling_nodes.append(c_node)
+                    # i cant put these in buider but i know that the only direct 
+                    # parents/childreen of instance are coupling nodes
+                    
+                    # we do not have information here to know if ports are inputs or
+                    # outputs so we just connect them as inputs arbitrarily 
+                    # and then check the direction when performing flatening
 
-                i_node.add_parent(c_node)
-                c_node.add_child(i_node)
+                    i_node.add_parent(c_node)
+                    c_node.add_child(i_node)
 
         # build input and output nodes
         # INPUT

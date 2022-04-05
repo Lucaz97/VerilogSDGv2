@@ -184,7 +184,9 @@ class InstanceNode(DependenceNode):
 
     def __str__(self):
         return "INSTANCE: " + self.modulename
-
+    def __repr__(self):
+        return self.__str__()
+        
 class ModuleNode(DependenceNode):
     def __init__(self, name):
         super().__init__()

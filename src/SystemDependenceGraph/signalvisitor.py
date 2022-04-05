@@ -259,18 +259,29 @@ class InstanceStruct:
         return "INSTANCE " + self.module + " PORTS: " + " ".join([str(p) for p in self.portlist])
 
 class InstanceVisitor(NodeVisitor):
-    def __init__(self, node, arrays):
+    def __init__(self, node, arrays, mit):
         self.struct = InstanceStruct(node.module)
         self.node = node
         self.arrays = arrays
+        self.IO_ports = mit.getIOPorts(node.module)
+        self.port_count = 0
 
     def start_visit(self):
         self.visit(self.node)
 
     def visit_PortArg(self, node):
-        iv = IdentifierVisitor(self.arrays)
-        iv.visit(node.argname)
-        self.struct.add_port((node.portname, iv.ids))
+        if node.portname == None: 
+            # gotta match this port
+            iv = IdentifierVisitor(self.arrays)
+            iv.visit(node.argname)
+            self.struct.add_port((self.IO_ports[self.port_count], iv.ids))
+        elif node.argname == None:
+            self.struct.add_port((node.portname, None))
+        else:
+            iv = IdentifierVisitor(self.arrays)
+            iv.visit(node.argname)
+            self.struct.add_port((node.portname, iv.ids))
+        self.port_count += 1 
 
 class IfVisitor(NodeVisitor):
     def __init__(self, arrays):
@@ -579,7 +590,7 @@ class FunctionVisitor(NodeVisitor):
     
 
 class SignalVisitor(NodeVisitor):
-    def __init__(self, arrays):
+    def __init__(self, arrays, mit):
         self.assigns = []
         self.always = []
         self.instances = []
@@ -588,6 +599,7 @@ class SignalVisitor(NodeVisitor):
         self.parameters = []
         self.functions = []
         self.arrays = arrays
+        self.mit = mit
 
     def visit_Assign(self, node):
         # I need to store lhs signal, rhs signals
@@ -635,7 +647,7 @@ class SignalVisitor(NodeVisitor):
         #    Identifier: X (at 239)
         #  PortArg: Y (at 240)
         #    Identifier: multProducts (at 240)
-        inst_visitor = InstanceVisitor(node, self.arrays)
+        inst_visitor = InstanceVisitor(node, self.arrays, self.mit)
         inst_visitor.start_visit()
         self.instances.append(inst_visitor.struct)
 
