@@ -8,13 +8,10 @@
 # -------------------------------------------------------------------------------
 from __future__ import absolute_import
 from __future__ import print_function
-from platform import node
 import sys
-import os
+from webbrowser import Opera
 
 from pyverilog.vparser.ast import *
-import pyverilog.utils.util as util
-import pyverilog.utils.verror as verror
 from SystemDependenceGraph.visit import *
 
 def get_width(lut, lhs):
@@ -27,13 +24,19 @@ def get_width(lut, lhs):
             w += get_width(lut, c)
     elif isinstance(lhs, Pointer):
         if lut[lhs.var.name][1]:
-            w = int(lut[lhs.var.name][0].msb.value) - int(lut[lhs.var.name][0].lsb.value) + 1
+            if isinstance(lut[lhs.var.name][0].msb, Operator) or isinstance(lut[lhs.var.name][0].msb, Operator) or isinstance(lut[lhs.var.name][0].msb, Identifier) or isinstance(lut[lhs.var.name][0].msb, Identifier):
+                w = lut[lhs.var.name][0]
+            else:
+                w = int(lut[lhs.var.name][0].msb.value) - int(lut[lhs.var.name][0].lsb.value) + 1
         else:    
             w = 1
     elif isinstance(lhs, Partselect):
         w = int(lhs.msb.value) - int(lhs.lsb.value) + 1
     elif lut[lhs.name][0]:
-        w = int(lut[lhs.name][0].msb.value) - int(lut[lhs.name][0].lsb.value) + 1
+        if isinstance(lut[lhs.name][0].msb, Operator) or isinstance(lut[lhs.name][0].msb, Operator) or isinstance(lut[lhs.name][0].msb, Identifier) or isinstance(lut[lhs.name][0].msb, Identifier):
+            w = lut[lhs.name][0]
+        else:
+            w = int(lut[lhs.name][0].msb.value) - int(lut[lhs.name][0].lsb.value) + 1
     else:
         w = 1
     return w
@@ -50,19 +53,25 @@ class BlockVisitor(NodeVisitor):
         bv.generic_visit(node)
         if bv.new_decls:
             for nd in bv.new_decls:
-                w_int = get_width( self.dwv.signaltable, nd[0])
-                w = Width(IntConst(w_int-1), IntConst(0))
+                w = get_width( self.dwv.signaltable, nd[0])
+                if not isinstance(w, Width):
+                    w = Width(IntConst(w-1), IntConst(0))
                 for s in nd[1]:
                     new_decl = Decl([Reg(s.name, width=w)])
                     temp_list = list(self.module.items)
                     temp_list.insert(0, new_decl)
                     self.module.items = tuple(temp_list)
 
+    def visit_ForStatement(self, node):
+        self.visit(node.statement)
+
     def visit_BlockingSubstitution(self, node):
         rhsv = RHSVisitor(True)
         rhsv.visit(node.right)
 
         if rhsv.extracted_ID:
+            if node not in self.node.statements:
+                print("ERROR: node not in block\n", self.node.statements, "\n", node, node.lineno, file=sys.stderr)
             i = self.node.statements.index(node)
             node.right = Rvalue(Identifier(rhsv.extracted_ID.name))
             temp_list = list(self.node.statements)
@@ -127,7 +136,7 @@ class RHSVisitor(NodeVisitor):
     def visit_BinOp(self, node): 
         #print(node)
         # look left
-        if isinstance(node.left, (Identifier, Pointer, Partselect, Value, Concat)):
+        if isinstance(node.left, (Identifier, Pointer, Partselect, Value, Concat, FunctionCall)):
             left = node.left
         else:
             rhsv = RHSVisitor(self.blocking)
@@ -139,7 +148,7 @@ class RHSVisitor(NodeVisitor):
             self.new_decls.extend(rhsv.new_decls)
 
         # look right
-        if isinstance(node.right, (Identifier, Pointer, Partselect, Value, Concat)):
+        if isinstance(node.right, (Identifier, Pointer, Partselect, Value, Concat, FunctionCall)):
             right = node.right
         else:
             rhsv = RHSVisitor(self.blocking)
@@ -345,8 +354,9 @@ class BinaryOpsVisitor(NodeVisitor):
         if bv.new_decls:
             for nd in bv.new_decls:
                 # nd is (lhs, list_of_new_var_names)
-                w_int = get_width( self.dwv.signaltable, nd[0])
-                w = Width(IntConst(w_int-1), IntConst(0))
+                w = get_width( self.dwv.signaltable, nd[0])
+                if not isinstance(w, Width):
+                    w = Width(IntConst(w-1), IntConst(0))
                 for s in nd[1]:
                     new_decl = Decl([Reg(s.name, width=w)])
                     temp_list = list(self.module.items)
@@ -391,6 +401,12 @@ class MissignBeginEndVisitor(NodeVisitor):
         self.decls.append(node)
 
     def visit_Always(self, node):
+        if not isinstance(node.statement, Block):
+            new_block = Block([node.statement])
+            node.statement = new_block
+        self.generic_visit(node)
+
+    def visit_ForStatement(self, node): 
         if not isinstance(node.statement, Block):
             new_block = Block([node.statement])
             node.statement = new_block
