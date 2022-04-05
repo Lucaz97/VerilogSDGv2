@@ -222,8 +222,8 @@ class ModuleSystemDependencyGraph(Graph):
                         self.builder[s].add_parent(self.builder[p])
             for a in self.signalvisitor.get_assigns():
                 if p.name in a.rhs_signals:
-                    self.builder[p].add_child(self.builder[s])
-                    self.builder[s].add_parent(self.builder[p])
+                    self.builder[p].add_child(self.builder[a])
+                    self.builder[a].add_parent(self.builder[p])
                 
         # input edges are already done
         # connect assigns with assigns
