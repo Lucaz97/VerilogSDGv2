@@ -657,6 +657,11 @@ class SignalVisitor(NodeVisitor):
     def visit_Output(self, node):
         self.outputs.append(node.name)
 
+    def visit_Inout(self, node):
+        self.outputs.append(node.name)
+        self.inputs.append(node.name)
+
+
     def visit_Parameter(self, node):
         iv = IdentifierVisitor(self.arrays)
         iv.visit(node)

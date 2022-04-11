@@ -39,7 +39,7 @@ class SystemDependencyGraph(Graph):
         fsdg_nodes = []
         # check if topmodule is in flattened sdgs
         if topmodule in self.flattened_sdgs:
-            return clone_nodelist(flattened_sdgs[topmodule])
+            return clone_nodelist(self.flattened_sdgs[topmodule])
         
         # if not flatten then add to flattened sdgs
         # check topmodule nodelist

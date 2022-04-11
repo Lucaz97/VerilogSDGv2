@@ -62,6 +62,8 @@ class Graph:
                     print(i+index, self.nodes.index(c)+index, file=link_test_n_file)
             else:
                 for c in n.get_children():
+                    if c not in self.nodes:
+                        print("NOT PRESENT",c, n)
                     print(i+index, self.nodes.index(c)+index, file=link_train_file)
             #for c in n.get_inter_children():
             #    G.add_edge(str(n)+" mem: "+str(id(n)), str(c)+" mem: "+str(id(c)), style="dashed")

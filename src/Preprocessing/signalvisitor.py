@@ -32,6 +32,8 @@ def get_width(lut, lhs):
             w = 1
     elif isinstance(lhs, Partselect):
         w = int(lhs.msb.value) - int(lhs.lsb.value) + 1
+    elif lhs.name not in lut:
+            w = 1
     elif lut[lhs.name][0]:
         if isinstance(lut[lhs.name][0].msb, Operator) or isinstance(lut[lhs.name][0].msb, Operator) or isinstance(lut[lhs.name][0].msb, Identifier) or isinstance(lut[lhs.name][0].msb, Identifier):
             w = lut[lhs.name][0]
@@ -375,6 +377,9 @@ class DatawidthVisitor(NodeVisitor):
         self.addEntry(node.name, node.width, node.dimensions)
 
     def visit_Output(self, node):
+        self.addEntry(node.name, node.width, node.dimensions)
+    
+    def visit_Inout(self, node):
         self.addEntry(node.name, node.width, node.dimensions)
 
     def visit_Reg(self, node):
