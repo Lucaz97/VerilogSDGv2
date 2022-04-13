@@ -14,6 +14,8 @@ class ProgramDependencyGraph(Graph):
         elif isinstance(parent_node, FunctionStruct):
             self._add_functionNode(parent_node)
 
+        self.visited = {}
+
     def _add_alwaysNode(self, always):
         anode = AlwaysNode(always.get_sensList())
         self.nodes.append(anode)
@@ -89,6 +91,8 @@ class ProgramDependencyGraph(Graph):
         # cond nodes are already connected
 
         for i,statement in enumerate(statements):
+            if statement in self.visited:
+                continue
             # for each nonblocking assign easy: check if lhs is in rhs or in condition
             # TODO FIX current solution misses if  true and false statements CHECK BELOW
             if isinstance(statement, NonBlockingAssignStruct):
@@ -127,6 +131,7 @@ class ProgramDependencyGraph(Graph):
                             parent_nodes = self.check_if_blocking(s, parent_nodes, lhs)
                         if isinstance(s, CaseStatementStruct):
                             parent_nodes = self.check_case_statement_blocking(s, parent_nodes, lhs)
+            self.visited[statement] = 1
 
     def check_if_blocking(self, statement, parent_nodes, lhs):
         # check dependency of condition
