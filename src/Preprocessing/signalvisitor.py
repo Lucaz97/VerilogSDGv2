@@ -8,6 +8,7 @@
 # -------------------------------------------------------------------------------
 from __future__ import absolute_import
 from __future__ import print_function
+from operator import mod
 import sys
 from webbrowser import Opera
 
@@ -42,6 +43,54 @@ def get_width(lut, lhs):
     else:
         w = 1
     return w
+
+
+class IfCondVisitor(NodeVisitor):
+    def __init__(self, module, dwv):
+        self.new_decls = []
+        self.module = module
+        self.dwv = dwv
+
+    def visit_Block(self, node):
+        bv = BlockIfVisitor(node, self.module, self.dwv)
+        bv.generic_visit(node)
+        if bv.new_decls:
+            for nd in bv.new_decls:
+                    new_decl = Decl([Reg(nd.name)])
+                    temp_list = list(self.module.items)
+                    temp_list.insert(0, new_decl)
+                    self.module.items = tuple(temp_list)
+class BlockIfVisitor(NodeVisitor):
+    
+    def __init__(self, node, module, dwv):
+        self.node = node
+        self.new_decls = []
+        self.module = module
+        self.dwv = dwv
+
+    def visit_Block(self, node):
+        bv = BlockIfVisitor(node, self.module, self.dwv)
+        bv.generic_visit(node)
+        if bv.new_decls:
+            for nd in bv.new_decls:
+                    new_decl = Decl([Reg(nd.name)])
+                    temp_list = list(self.module.items)
+                    temp_list.insert(0, new_decl)
+                    self.module.items = tuple(temp_list)
+
+    def visit_IfStatement(self, node):
+        cond = node.cond
+        extracted_id = Identifier("COND_"+cond.__class__.__name__ + '_' + str(id(cond)))
+        new_assign = BlockingSubstitution(Lvalue(extracted_id), Rvalue(cond))
+        i = self.node.statements.index(node)
+        temp_list = list(self.node.statements)
+        temp_list.insert(i,new_assign)
+        self.node.statements = tuple(temp_list)
+        node.cond = extracted_id
+        self.new_decls.append(extracted_id)
+        self.visit(node.true_statement)
+        if node.false_statement:
+            self.visit(node.false_statement)
 
 class BlockVisitor(NodeVisitor):
     def __init__(self, node, module, dwv):
@@ -135,6 +184,10 @@ class RHSVisitor(NodeVisitor):
         self.extracted_ID = None
 
     # Method for binary operators
+    def visit_Repeat(self, node):
+        pass
+    def visit_Concat(self, node):
+        pass
     def visit_BinOp(self, node): 
         #print(node)
         # look left
@@ -336,13 +389,21 @@ class BinaryOpsVisitor(NodeVisitor):
 
     def __init__(self, module):
         self.module = module
-        # preprocess begin ends and assigns
-        mbev = MissignBeginEndVisitor(module)
-        mbev.visit(module)
-        mbev.fix_decls()
+        # identify inouts
+        iov = InOutVisitor()
+        iov.visit(module)
+
         # build datawidth table
         self.dwv = DatawidthVisitor()
         self.dwv.visit(module)
+
+        # preprocess begin ends and assigns
+        mbev = MissignBeginEndVisitor(module, iov.inouts, self.dwv)
+        mbev.visit(module)
+        mbev.fix_decls()
+        
+        icv = IfCondVisitor(module, self.dwv)
+        icv.visit(module)
 
     #def visit_Assign(self, node):
     #    print("ERROR: continuous assigns not supported, run preprocessor!")
@@ -397,10 +458,12 @@ class DatawidthVisitor(NodeVisitor):
 
 class MissignBeginEndVisitor(NodeVisitor):        
     
-    def __init__(self, module):
+    def __init__(self, module,inouts,dwv):
         self.module = module
         self.to_fix = []
         self.decls = []
+        self.inouts = inouts
+        self.dwv = dwv
 
     def visit_Decl(self, node): 
         self.decls.append(node)
@@ -434,22 +497,39 @@ class MissignBeginEndVisitor(NodeVisitor):
 
     def visit_Assign(self, node):
         if isinstance(node.right.var, Operator):
-            new_blockingSub = BlockingSubstitution(node.left,node.right)
-            new_always = Always(SensList([Sens(None, 'all')]), Block([new_blockingSub]))
-            temp_list = list(self.module.items)
-            temp_list.remove(node)
-            temp_list.append(new_always)
-            self.to_fix.append(node.left)
-            self.module.items = tuple(temp_list)
+
+            iv = _IdentifierVisitor()
+            iv.visit(node.left)
+            any_inouts = False
+            for idf in iv.ids:
+                if idf in self.inouts:
+                    any_inouts = True
+                    break
+            if any_inouts:
+                extracted_id = Identifier(node.__class__.__name__ + '_' + str(id(node)))
+                new_blockingSub = BlockingSubstitution(Lvalue(extracted_id),node.right)
+                new_always = Always(SensList([Sens(None, 'all')]), Block([new_blockingSub]))
+                temp_list = list(self.module.items)
+                node.right = Rvalue(extracted_id)
+                temp_list.append(new_always)
+                self.to_fix.append(node.left)
+                self.module.items = tuple(temp_list)
+                w = get_width( self.dwv.signaltable, node.left)
+                if not isinstance(w, Width):
+                    w = Width(IntConst(w-1), IntConst(0))
+                new_decl = Decl([Reg(extracted_id.name, width=w)])
+                temp_list = list(self.module.items)
+                temp_list.insert(0, new_decl)
+                self.module.items = tuple(temp_list)
+            else:
+                new_blockingSub = BlockingSubstitution(node.left,node.right)
+                new_always = Always(SensList([Sens(None, 'all')]), Block([new_blockingSub]))
+                temp_list.remove(node)
+                temp_list.append(new_always)
+                self.to_fix.append(node.left)
+                self.module.items = tuple(temp_list)
 
     def fix_decls(self):
-        class _IdentifierVisitor(NodeVisitor):
-            def __init__(self): 
-                self.ids = []
-            
-            def visit_Identifier(self, node): 
-                self.ids.append(node.name)
-                print("ID:",node.name)
         print(self.to_fix)
         for lhs in self.to_fix:
             iv = _IdentifierVisitor()
@@ -474,3 +554,19 @@ class MissignBeginEndVisitor(NodeVisitor):
                  elif isinstance(p, Ioport) and p.second and isinstance(p.second, Wire) and p.second.name in iv.ids:
                     new_reg = Reg(p.second.name, width=p.second.width, dimensions=p.second.dimensions, signed=p.second.signed, lineno=p.second.lineno)
                     p.second = new_reg
+
+
+class InOutVisitor(NodeVisitor):
+    def __init__(self):
+        self.inouts = []
+    
+    def visit_Inout(self, node):
+        self.inouts.append(node.name)
+
+class _IdentifierVisitor(NodeVisitor):
+            def __init__(self): 
+                self.ids = []
+            
+            def visit_Identifier(self, node): 
+                self.ids.append(node.name)
+                #print("ID:",node.name)

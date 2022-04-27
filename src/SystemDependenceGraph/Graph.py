@@ -36,9 +36,9 @@ class Graph:
     def get_nodes(self):
         return self.nodes
 
-    def print_graph(self, path, index=0, key_name="locking_key", relocking = False):
+    def print_graph(self, path, index=0, key_name="locking_key", relocking = False, key=[]):
 
-        if exists(path+"_features.txt"):
+        if relocking:
             feature_file = open(path+"_features.txt", 'a')
             cell_file = open(path+"_cells.txt", 'a')
             link_train_file = open(path+"_link_train.txt", 'a')
@@ -56,10 +56,21 @@ class Graph:
             print(encode_node(n), file=feature_file)
             print(n, file=cell_file)
             if isinstance(n, CondNode) and key_name in n.cond_statement.get_cond_dependencies():
+                key_bit = int(n.cond_statement.get_cond_constants()[0].value)
+                key_bit_value = int(key[key_bit])
+                print (key_bit_value)
+                # key[key_bit] ? true : false
                 for c in n.true_statements:
-                    print(i+index, self.nodes.index(c)+index, file=link_test_file)
+                    if key_bit_value:
+                        print(i+index, self.nodes.index(c)+index, file=link_test_file)
+                    else:
+                        print(i+index, self.nodes.index(c)+index, file=link_test_n_file)
                 for c in n.false_statements:
-                    print(i+index, self.nodes.index(c)+index, file=link_test_n_file)
+                    if key_bit_value:
+                        print(i+index, self.nodes.index(c)+index, file=link_test_n_file)
+                    else:
+                        print(i+index, self.nodes.index(c)+index, file=link_test_file)
+
             else:
                 for c in n.get_children():
                     if c not in self.nodes:

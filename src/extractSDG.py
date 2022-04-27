@@ -90,6 +90,8 @@ def main():
                          default="locking_key", help="run formality to check equivalence between original design and processed design")  
     optparser.add_option("-r", "--relocking", action="store_true", dest="relocking",
                          default=False, help="is relocking")  
+    optparser.add_option("-y", "--keyfile", action="store", dest="keyfile",
+                         default=False, help="keyfile") 
     (options, args) = optparser.parse_args()
     if not options.top:
         optparser.error('Top module name not given')
@@ -111,7 +113,8 @@ def main():
     outfile = open(options.target+"original_design.v", 'w')
     codegen = ASTCodeGenerator()
     print(codegen.visit(ast), file=outfile)
-
+    b = open("ast_orig.txt", "w")
+    ast.show(buf=b)
     mv = mvisit()
     mv.visit(ast)
     modulenames = mv.get_modulenames()
@@ -128,10 +131,14 @@ def main():
 
     sdg = SystemDependencyGraph(ast, cfg.top)
 
-    
+    keyfile = open(options.keyfile, "r")
+    keyfile.readline()
+    key=list(reversed(keyfile.readline()))
+    print(key)
     
     #sdg.draw("sdg")
-    sdg.print_graph(options.target+"sdg", options.index, options.key_name, options.relocking)
+
+    sdg.print_graph(options.target+"sdg", options.index, options.key_name, options.relocking, key)
 
     if options.formality:
         gen_formality(options.target, options.top)
