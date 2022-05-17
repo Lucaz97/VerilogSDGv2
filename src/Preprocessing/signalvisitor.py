@@ -524,6 +524,7 @@ class MissignBeginEndVisitor(NodeVisitor):
             else:
                 new_blockingSub = BlockingSubstitution(node.left,node.right)
                 new_always = Always(SensList([Sens(None, 'all')]), Block([new_blockingSub]))
+                temp_list = list(self.module.items)
                 temp_list.remove(node)
                 temp_list.append(new_always)
                 self.to_fix.append(node.left)

@@ -56,7 +56,11 @@ class Graph:
             print(encode_node(n), file=feature_file)
             print(n, file=cell_file)
             if isinstance(n, CondNode) and key_name in n.cond_statement.get_cond_dependencies():
+                print('node', n)
+                print("COND CONSTANTS", n.cond_statement.get_cond_constants()[0].value)
                 key_bit = int(n.cond_statement.get_cond_constants()[0].value)
+                print("Key bi:", key_bit)
+                print("key", key)
                 key_bit_value = int(key[key_bit])
                 print (key_bit_value)
                 # key[key_bit] ? true : false

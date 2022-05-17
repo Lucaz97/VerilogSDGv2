@@ -133,8 +133,17 @@ def main():
 
     keyfile = open(options.keyfile, "r")
     keyfile.readline()
-    key=list(reversed(keyfile.readline()))
-    print(key)
+    key = []
+    for line in keyfile:
+        if '1' in line or '0' in line:
+            key.extend(list(line))
+
+    key.reverse()
+
+    if '\n' in key:
+        key.remove('\n')
+    print('Key:', key)
+    
     
     #sdg.draw("sdg")
 
