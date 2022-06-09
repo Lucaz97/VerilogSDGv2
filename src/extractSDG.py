@@ -140,7 +140,8 @@ def main():
 
     key.reverse()
 
-    if '\n' in key:
+    while '\n' in key:
+        
         key.remove('\n')
     print('Key:', key)
     
