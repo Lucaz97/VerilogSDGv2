@@ -141,8 +141,8 @@ def main():
     key.reverse()
 
     while '\n' in key:
-        
         key.remove('\n')
+        
     print('Key:', key)
     
     
