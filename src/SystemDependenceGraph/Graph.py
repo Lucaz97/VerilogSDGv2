@@ -50,6 +50,7 @@ class Graph:
             link_train_file = open(path+"_link_train.txt", 'w')
             link_test_file = open(path+("_link_test.txt" if not relocking else "_link_test_relock.txt"), 'w')
             link_test_n_file = open(path+("_link_test_n.txt" if not relocking else "_link_test_relock_n.txt"), 'w')
+            key_mapping_file = open(path+"_key_mapping.txt", "w")
 
         for i, n in enumerate(self.nodes):
             # print(n)
@@ -64,6 +65,8 @@ class Graph:
                 key_bit_value = int(key[key_bit])
                 print (key_bit_value)
                 # key[key_bit] ? true : false
+                if not relocking:
+                    print(i+index, self.nodes.index(c)+index, key_bit, file=key_mapping_file)
                 for c in n.true_statements:
                     if key_bit_value:
                         print(i+index, self.nodes.index(c)+index, file=link_test_file)
