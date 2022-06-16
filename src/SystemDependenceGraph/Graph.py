@@ -65,14 +65,19 @@ class Graph:
                 key_bit_value = int(key[key_bit])
                 print (key_bit_value)
                 # key[key_bit] ? true : false
-                if not relocking:
-                    print(i+index, self.nodes.index(c)+index, key_bit, file=key_mapping_file)
+                
                 for c in n.true_statements:
+                    if not relocking:
+                        print(i+index, self.nodes.index(c)+index, key_bit, file=key_mapping_file)
+
                     if key_bit_value:
                         print(i+index, self.nodes.index(c)+index, file=link_test_file)
                     else:
                         print(i+index, self.nodes.index(c)+index, file=link_test_n_file)
                 for c in n.false_statements:
+                    if not relocking:
+                        print(i+index, self.nodes.index(c)+index, key_bit, file=key_mapping_file)
+                        
                     if key_bit_value:
                         print(i+index, self.nodes.index(c)+index, file=link_test_n_file)
                     else:
